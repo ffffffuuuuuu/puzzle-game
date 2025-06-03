@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>九宮格旋轉拼圖</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .game-title {
+            color: #333;
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .game-info {
+            display: none;
+        }
+        
+        .info-item {
+            text-align: center;
+            color: #555;
+            font-weight: bold;
+        }
+        
+        .info-value {
+            font-size: 20px;
+            color: #667eea;
+            display: block;
+            margin-top: 5px;
+        }
+        
+        .puzzle-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 3px;
+            background: #333;
+            border-radius: 15px;
+            padding: 3px;
+            margin-bottom: 20px;
+            aspect-ratio: 1;
+        }
+        
+        .puzzle-piece {
+            background-size: 300% 300%;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            min-height: 100px;
+            border: 2px solid #333;
+            background-color: #f0f0f0;
+        }
+        
+        .puzzle-piece:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+        
+        .puzzle-piece:active {
+            transform: scale(0.95);
+        }
+        
+        .puzzle-piece.rotating {
+            transform: rotate(90deg) scale(1.1);
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .success-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 1000;
+            animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        @keyframes bounceIn {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.3);
+            }
+            50% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: center;
+            color: #555;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .preview-container {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .preview-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 10px;
+            border: 3px solid #667eea;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        
+        @media (max-width: 480px) {
+            .game-container {
+                padding: 15px;
+            }
+            
+            .game-title {
+                font-size: 24px;
+            }
+            
+            .puzzle-grid {
+                gap: 2px;
+                padding: 2px;
+            }
+            
+            .controls {
+                gap: 10px;
+            }
+            
+            .btn {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1 class="game-title">🧩 九宮格旋轉拼圖</h1>
+            <div class="preview-container">
+                <img id="previewImage" class="preview-image" alt="目標圖片">
+                <div style="margin-top: 5px; color: #666; font-size: 12px;">目標圖片</div>
+            </div>
+        </div>
+        
+        <div class="game-info">
+            <div class="info-item">
+                <div>步數</div>
+                <span class="info-value" id="moves">0</span>
+            </div>
+            <div class="info-item">
+                <div>時間</div>
+                <span class="info-value" id="time">00:00</span>
+            </div>
+            <div class="info-item">
+                <div>完成度</div>
+                <span class="info-value" id="progress">0%</span>
+            </div>
+        </div>
+        
+        <div class="puzzle-grid" id="puzzleGrid">
+            <!-- 拼圖方塊將在這裡生成 -->
+        </div>
+        
+        <div class="controls">
+            <button class="btn" onclick="shufflePuzzle()">🔀 重新打亂</button>
+            <button class="btn" onclick="newGame()">🆕 新遊戲</button>
+            <button class="btn" onclick="showHint()">💡 提示</button>
+        </div>
+        
+        <div class="instructions">
+            <strong>遊戲說明：</strong><br>
+            點擊任意方塊來旋轉它90度，將所有方塊調整到正確角度以完成拼圖！
+        </div>
+    </div>
+    
+    <div class="success-message" id="successMessage">
+        🎉 恭喜完成！🎉
+    </div>
+
+    <script>
+        class RotatePuzzleGame {
+            constructor() {
+                this.gridSize = 3;
+                this.pieces = [];
+                this.gameCompleted = false;
+                this.currentImage = null;
+                
+                // ===== 在這裡輸入你的圖片網址！ =====
+                this.customImageUrl = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center";
+                // 你可以把上面的網址改成任何你想要的圖片網址
+                // =======================================
+                
+                // 預設圖片（如果自定義圖片載入失敗時使用）
+                this.images = [];
+                this.createDefaultImages();
+                this.init();
+            }
+            
+            createDefaultImages() {
+                // 創建多個不同的彩色幾何圖案作為預設圖片
+                const patterns = [
+                    { type: 'gradient', colors: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'] },
+                    { type: 'geometric', colors: ['#A8E6CF', '#FFD93D', '#6BCF7F', '#4D96FF'] },
+                    { type: 'circular', colors: ['#FF8A80', '#82B1FF', '#B39DDB', '#C5E1A5'] },
+                    { type: 'triangular', colors: ['#FFAB91', '#CE93D8', '#90CAF9', '#A5D6A7'] }
+                ];
+                
+                patterns.forEach((pattern, index) => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 300;
+                    canvas.height = 300;
+                    const ctx = canvas.getContext('2d');
+                    
+                    this.drawPattern(ctx, pattern, 300, 300);
+                    this.images.push(canvas.toDataURL());
+                });
+            }
+            
+            drawPattern(ctx, pattern, width, height) {
+                const { type, colors } = pattern;
+                
+                switch(type) {
+                    case 'gradient':
+                        const gradient = ctx.createLinearGradient(0, 0, width, height);
+                        colors.forEach((color, i) => {
+                            gradient.addColorStop(i / (colors.length - 1), color);
+                        });
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(0, 0, width, height);
+                        
+                        // 添加圓形裝飾
+                        for(let i = 0; i < 8; i++) {
+                            ctx.fillStyle = colors[i % colors.length] + '40';
+                            ctx.beginPath();
+                            ctx.arc(
+                                Math.random() * width,
+                                Math.random() * height,
+                                20 + Math.random() * 40,
+                                0, Math.PI * 2
+                            );
+                            ctx.fill();
+                        }
+                        break;
+                        
+                    case 'geometric':
+                        ctx.fillStyle = colors[0];
+                        ctx.fillRect(0, 0, width, height);
+                        
+                        // 繪製菱形圖案
+                        for(let i = 0; i < 12; i++) {
+                            ctx.fillStyle = colors[i % colors.length];
+                            ctx.beginPath();
+                            const x = (i % 4) * (width / 4) + width / 8;
+                            const y = Math.floor(i / 4) * (height / 3) + height / 6;
+                            const size = 30;
+                            ctx.moveTo(x, y - size);
+                            ctx.lineTo(x + size, y);
+                            ctx.lineTo(x, y + size);
+                            ctx.lineTo(x - size, y);
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+                        break;
+                        
+                    case 'circular':
+                        ctx.fillStyle = colors[0];
+                        ctx.fillRect(0, 0, width, height);
+                        
+                        // 繪製同心圓
+                        const centerX = width / 2;
+                        const centerY = height / 2;
+                        for(let i = 4; i >= 0; i--) {
+                            ctx.fillStyle = colors[i % colors.length];
+                            ctx.beginPath();
+                            ctx.arc(centerX, centerY, (i + 1) * 30, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        break;
+                        
+                    case 'triangular':
+                        ctx.fillStyle = colors[0];
+                        ctx.fillRect(0, 0, width, height);
+                        
+                        // 繪製三角形圖案
+                        for(let i = 0; i < 16; i++) {
+                            ctx.fillStyle = colors[i % colors.length];
+                            ctx.beginPath();
+                            const x = (i % 4) * (width / 4) + width / 8;
+                            const y = Math.floor(i / 4) * (height / 4) + height / 8;
+                            const size = 25;
+                            ctx.moveTo(x, y - size);
+                            ctx.lineTo(x - size, y + size);
+                            ctx.lineTo(x + size, y + size);
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+                        break;
+                }
+            }
+            
+            init() {
+                console.log('Game initializing...');
+                this.newGame();
+            }
+            
+            newGame() {
+                console.log('Starting new game...');
+                
+                // 嘗試載入自定義圖片
+                if (this.customImageUrl) {
+                    this.loadCustomImage();
+                } else {
+                    // 使用預設圖片
+                    this.currentImage = this.images[Math.floor(Math.random() * this.images.length)];
+                    this.setupGame();
+                }
+            }
+            
+            loadCustomImage() {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    // 創建canvas來處理圖片
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 400;
+                    canvas.height = 400;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 繪製圖片並調整為正方形
+                    ctx.drawImage(img, 0, 0, 400, 400);
+                    this.currentImage = canvas.toDataURL();
+                    console.log('Custom image loaded successfully');
+                    this.setupGame();
+                };
+                img.onerror = () => {
+                    console.log('Custom image failed to load, using default');
+                    this.currentImage = this.images[Math.floor(Math.random() * this.images.length)];
+                    this.setupGame();
+                };
+                img.src = this.customImageUrl;
+            }
+            
+            setupGame() {
+                document.getElementById('previewImage').src = this.currentImage;
+                
+                this.pieces = [];
+                this.gameCompleted = false;
+                
+                // 初始化拼圖方塊
+                for(let i = 0; i < 9; i++) {
+                    this.pieces.push({
+                        id: i,
+                        rotation: 0,
+                        correctRotation: 0
+                    });
+                }
+                
+                this.createPuzzleGrid();
+                setTimeout(() => this.shufflePuzzle(), 100);
+            }
+            
+            createPuzzleGrid() {
+                const grid = document.getElementById('puzzleGrid');
+                grid.innerHTML = '';
+                
+                for(let i = 0; i < 9; i++) {
+                    const piece = document.createElement('div');
+                    piece.className = 'puzzle-piece';
+                    piece.id = `piece-${i}`;
+                    piece.onclick = () => this.rotatePiece(i);
+                    
+                    // 設置背景圖片位置
+                    const row = Math.floor(i / 3);
+                    const col = i % 3;
+                    piece.style.backgroundImage = `url(${this.currentImage})`;
+                    piece.style.backgroundPosition = `${-col * 100}% ${-row * 100}%`;
+                    piece.style.backgroundSize = '300% 300%';
+                    piece.style.minHeight = '100px';
+                    piece.style.border = '2px solid #333';
+                    
+
+                    
+                    grid.appendChild(piece);
+                }
+                
+                console.log('Puzzle grid created with', this.currentImage ? 'image' : 'no image');
+            }
+            
+            rotatePiece(index) {
+                if (this.gameCompleted) return;
+                
+                const piece = this.pieces[index];
+                const element = document.getElementById(`piece-${index}`);
+                
+                // 暫時移除transition避免動畫衝突
+                element.style.transition = 'none';
+                
+                // 計算當前實際角度（避免累積誤差）
+                const currentRotation = piece.rotation;
+                const targetRotation = (currentRotation + 90) % 360;
+                
+                // 處理跨越0度的情況（270度->0度）
+                let animationTarget = targetRotation;
+                if (currentRotation === 270 && targetRotation === 0) {
+                    animationTarget = 360; // 先轉到360度
+                }
+                
+                // 重新啟用transition
+                setTimeout(() => {
+                    element.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                    element.style.transform = `rotate(${animationTarget}deg)`;
+                    
+                    // 如果是360度的情況，動畫結束後重置為0度
+                    if (animationTarget === 360) {
+                        setTimeout(() => {
+                            element.style.transition = 'none';
+                            element.style.transform = `rotate(0deg)`;
+                            setTimeout(() => {
+                                element.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                            }, 50);
+                        }, 300);
+                    }
+                }, 10);
+                
+                piece.rotation = targetRotation;
+                this.checkWin();
+            }
+            
+            shufflePuzzle() {
+                // 隨機旋轉每個方塊
+                for(let i = 0; i < 9; i++) {
+                    const randomRotations = Math.floor(Math.random() * 4);
+                    const finalRotation = randomRotations * 90;
+                    this.pieces[i].rotation = finalRotation;
+                    
+                    const element = document.getElementById(`piece-${i}`);
+                    element.style.transition = 'none'; // 打亂時不要動畫
+                    element.style.transform = `rotate(${finalRotation}deg)`;
+                }
+                
+                // 恢復transition
+                setTimeout(() => {
+                    for(let i = 0; i < 9; i++) {
+                        const element = document.getElementById(`piece-${i}`);
+                        element.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                    }
+                }, 100);
+            }
+            
+            checkWin() {
+                const allCorrect = this.pieces.every(piece => 
+                    piece.rotation === piece.correctRotation
+                );
+                
+                if (allCorrect) {
+                    this.gameCompleted = true;
+                    this.showSuccess();
+                }
+            }
+            
+            showSuccess() {
+                document.getElementById('successMessage').style.display = 'block';
+                
+                setTimeout(() => {
+                    document.getElementById('successMessage').style.display = 'none';
+                }, 3000);
+            }
+            
+            updateUI() {
+                document.getElementById('moves').textContent = this.moves;
+                
+                // 計算完成度
+                const correctPieces = this.pieces.filter(piece => 
+                    piece.rotation === piece.correctRotation
+                ).length;
+                const progress = Math.round((correctPieces / 9) * 100);
+                document.getElementById('progress').textContent = progress + '%';
+            }
+            
+            updateTimer() {
+                if (!this.gameCompleted) {
+                    const elapsed = Date.now() - this.startTime;
+                    document.getElementById('time').textContent = this.formatTime(elapsed);
+                }
+                requestAnimationFrame(() => this.updateTimer());
+            }
+            
+            formatTime(ms) {
+                const seconds = Math.floor(ms / 1000);
+                const minutes = Math.floor(seconds / 60);
+                return `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+            }
+            
+            showHint() {
+                // 高亮顯示錯誤的方塊
+                this.pieces.forEach((piece, index) => {
+                    const element = document.getElementById(`piece-${index}`);
+                    if (piece.rotation !== piece.correctRotation) {
+                        element.style.boxShadow = '0 0 20px #FF6B6B';
+                        setTimeout(() => {
+                            element.style.boxShadow = '';
+                        }, 1500);
+                    }
+                });
+            }
+        }
+        
+        // 全域函數
+        let game;
+        
+        function shufflePuzzle() {
+            game.shufflePuzzle();
+        }
+        
+        function newGame() {
+            game.newGame();
+        }
+        
+        function showHint() {
+            game.showHint();
+        }
+        
+        // 初始化遊戲
+        window.onload = () => {
+            game = new RotatePuzzleGame();
+        };
+    </script>
+</body>
+</html>
