@@ -145,19 +145,66 @@
             animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
         
-        @keyframes bounceIn {
-            0% {
-                opacity: 0;
-                transform: translate(-50%, -50%) scale(0.3);
-            }
-            50% {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1.1);
-            }
-            100% {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1);
-            }
+        .hint-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .hint-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            max-width: 90%;
+            max-height: 90%;
+        }
+        
+        .hint-image {
+            max-width: 400px;
+            max-height: 400px;
+            width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .hint-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .hint-instruction {
+            color: #666;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        
+        .countdown {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 107, 107, 0.9);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         
         .instructions {
@@ -239,9 +286,8 @@
         </div>
         
         <div class="controls">
-            <button class="btn" onclick="shufflePuzzle()">🔀 重新打亂</button>
-            <button class="btn" onclick="newGame()">🆕 新遊戲</button>
-            <button class="btn" onclick="showHint()">💡 提示</button>
+            <button class="btn" onclick="shufflePuzzle()">重新打亂</button>
+            <button class="btn" onclick="showHint()">查看提示</button>
         </div>
         
         <div class="instructions">
@@ -250,6 +296,15 @@
         </div>
     </div>
     
+    <div class="hint-overlay" id="hintOverlay" onclick="closeHint()">
+        <div class="hint-content" onclick="event.stopPropagation()">
+            <div class="countdown" id="countdown">5</div>
+            <div class="hint-title">🎯 目標圖片</div>
+            <img id="hintImage" class="hint-image" alt="目標圖片">
+            <div class="hint-instruction">請記住這個圖片，然後調整拼圖方塊！<br>點擊任意地方關閉</div>
+        </div>
+    </div>
+
     <div class="success-message" id="successMessage">
         🎉 恭喜完成！🎉
     </div>
@@ -263,7 +318,7 @@
                 this.currentImage = null;
                 
                 // ===== 在這裡輸入你的圖片網址！ =====
-                this.customImageUrl = "https://memeprod.ap-south-1.linodeobjects.com/user-template/7818ccbe151d3f3b456c2cc4f6f67a5d.png";
+                this.customImageUrl = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center";
                 // 你可以把上面的網址改成任何你想要的圖片網址
                 // =======================================
                 
@@ -418,7 +473,8 @@
             }
             
             setupGame() {
-                document.getElementById('previewImage').src = this.currentImage;
+                this.currentImage = this.images[Math.floor(Math.random() * this.images.length)];
+                document.getElementById('hintImage').src = this.currentImage;
                 
                 this.pieces = [];
                 this.gameCompleted = false;
@@ -569,16 +625,37 @@
             }
             
             showHint() {
-                // 高亮顯示錯誤的方塊
-                this.pieces.forEach((piece, index) => {
-                    const element = document.getElementById(`piece-${index}`);
-                    if (piece.rotation !== piece.correctRotation) {
-                        element.style.boxShadow = '0 0 20px #FF6B6B';
-                        setTimeout(() => {
-                            element.style.boxShadow = '';
-                        }, 1500);
+                const overlay = document.getElementById('hintOverlay');
+                const hintImage = document.getElementById('hintImage');
+                const countdown = document.getElementById('countdown');
+                
+                hintImage.src = this.currentImage;
+                overlay.style.display = 'flex';
+                
+                // 5秒倒數計時
+                let timeLeft = 5;
+                countdown.textContent = timeLeft;
+                
+                const timer = setInterval(() => {
+                    timeLeft--;
+                    countdown.textContent = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(timer);
+                        this.closeHint();
                     }
-                });
+                }, 1000);
+                
+                // 儲存timer以便手動關閉時清除
+                this.hintTimer = timer;
+            }
+            
+            closeHint() {
+                const overlay = document.getElementById('hintOverlay');
+                overlay.style.display = 'none';
+                if (this.hintTimer) {
+                    clearInterval(this.hintTimer);
+                    this.hintTimer = null;
+                }
             }
         }
         
@@ -595,6 +672,10 @@
         
         function showHint() {
             game.showHint();
+        }
+        
+        function closeHint() {
+            game.closeHint();
         }
         
         // 初始化遊戲
