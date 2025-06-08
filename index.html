@@ -438,6 +438,9 @@
             }
             
             shufflePuzzle() {
+                // 重要修復：重置遊戲完成狀態
+                this.gameCompleted = false;
+                
                 for(let i = 0; i < 9; i++) {
                     const randomRotations = Math.floor(Math.random() * 4);
                     const finalRotation = randomRotations * 90;
